@@ -1,7 +1,7 @@
 name: Build LemonLoader ARMv7
 
 on:
-  workflow_dispatch:  # manual trigger from GitHub Actions tab
+  workflow_dispatch:
 
 jobs:
   build-armv7:
@@ -18,29 +18,21 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Setup Java (for Android SDK)
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Setup Android NDK
-        uses: android-actions/setup-android@v3
-        with:
-          cmdline-tools-version: '11076708'
-
-      - name: Install NDK r26
+      - name: Setup NDK directly
         run: |
-          sdkmanager "ndk;26.1.10909125"
-          echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/26.1.10909125" >> $GITHUB_ENV
+          NDK_VERSION="r26d"
+          wget -q "https://dl.google.com/android/repository/android-ndk-${NDK_VERSION}-linux.zip" -O ndk.zip
+          unzip -q ndk.zip
+          echo "ANDROID_NDK_HOME=$PWD/android-ndk-${NDK_VERSION}" >> $GITHUB_ENV
+          echo "NDK_HOME=$PWD/android-ndk-${NDK_VERSION}" >> $GITHUB_ENV
 
-      - name: Install Rust stable
+      - name: Install Rust stable + ARMv7 target
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: armv7-linux-androideabi
 
       - name: Install cargo-ndk
-        run: cargo install cargo-ndk
+        run: cargo install cargo-ndk --locked
 
       - name: Build Bootstrap (ARMv7)
         run: |
@@ -66,8 +58,7 @@ jobs:
         run: |
           dotnet build MelonLoader/MelonLoader.csproj \
             -c Release \
-            -o ./output/net \
-            /p:TargetFramework=net8.0
+            -o ./output/net
 
       - name: Build NativeHost
         run: |
@@ -88,4 +79,3 @@ jobs:
           name: LemonLoader-armv7
           path: ./output/
           retention-days: 7
-          
